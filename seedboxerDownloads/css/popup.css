@@ -11,8 +11,20 @@ body {
 	font-size: 10px;
 	
 }
+#info {
+	float : left;
+	width: 145px;
+}
+#play-pause-button {
+	float : right;
+	cursor: pointer;
+}
+#play-pause-button  img{
+	width : 30px;
+}
 #progressbar {
 	height: 22px;
+	clear: both;
 }
 .title{
 	font-size: 12px;
@@ -135,7 +147,7 @@ clear : both;
         background: #ccc;
     }
 	
-#progress-loader {
+.loader {
 	float : right;
 }
 	

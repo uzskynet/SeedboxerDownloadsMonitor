@@ -9,6 +9,7 @@ $(document).ready(function(){
 		});
 	});
 	$(".close").live("click",removeQueueElement);
+	$("#play-pause-button").live("click",togglePlayPause);
 
 	$("#search").keyup(filterSearch);
 	$("#search").mouseup(filterSearch);
@@ -65,6 +66,7 @@ function tabChange(event, ui){
 			getAvailableDownloads();
 			$("#selected-count").text(0);
 			$( "#download-btn" ).button();
+			$("#downloads-list").html("");
 			clearTimeout(timer);
 			break;
 		case 2:
@@ -75,28 +77,19 @@ function tabChange(event, ui){
 function updateProgress(){
 	var tabIndex = $( "#tabs" ).tabs( "option", "active" );
 	if(tabIndex == 0){
-		var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/status?username="+localStorage["login"];
 		$.ajaxSetup({global : false});
 		$("#progress-loader").show();
-		$.ajax(url)
-		.done(function(data, code, xhr){
-			$.ajaxSetup({global : true});
-			var xml = xhr.responseXML;
-			var download = xml.getElementsByTagName("download");
-			if(download.length != 0){
-				var downloadName = download[0].getElementsByTagName("fileName")[0].textContent;
-				var size = Number(download[0].getElementsByTagName("size")[0].textContent);
-				var transfered = Number(download[0].getElementsByTagName("transferred")[0].textContent);
-				var progress = transfered * 100 / size;
-				$("#info").text(downloadName + " ["+ progress.toFixed(2)+"%]");
-				$( "#progressbar" ).progressbar({
-					value: progress
-				});
-				setTimeout(updateProgress,10000);
-			}
+		$("#queue-loader").show();
+		getTransfersFromServer(function(){
+			setTimeout(updateProgress,10000);
 			$("#progress-loader").hide();
+			$.ajaxSetup({global : true});
+		});
+		getQueue(function(){
+			$("#queue-loader").hide();
+			$.ajaxSetup({global : true});
 			
-		})
+		});
 	}
 	
 }
@@ -104,12 +97,35 @@ function getTransfers(){
 
 	$( "#progressbar" ).progressbar();
 	$( "#progressbar" ).progressbar("destroy");
+	getTransfersFromServer();
+	
+}
+/**
+**
+This function gets called in two diferent scenarios, one is when rendering the tab "Transfering" and the other
+is when updating the progress. This two scenarios show a different ajax loader, the first one shows a semi-transparent 
+overlay with the loader in the center. The second one shows a loader at the bottom of the progress bar.
+To be able to use the same function for both we added a callback that's executed after the ajax call was successful.
+
+**
+**/
+
+function getTransfersFromServer(callback){
 	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/status?username="+localStorage["login"];
 	$.ajax(url)
 		.done(function(data, code, xhr){
 			var xml = xhr.responseXML;
 			var download = xml.getElementsByTagName("download");
+			status = xml.getElementsByTagName("status")[0].textContent;
+			if(status == "STARTED"){
+				$("#play-pause-button").find("img").attr("src","pause.png");
+			}
+			else if(status == "STOPPED"){
+				$("#play-pause-button").find("img").attr("src","play.png");
+			}
 			if(download.length == 0){
+			$( "#progressbar" ).progressbar();
+			$( "#progressbar" ).progressbar("destroy");
 				$("#info").text("Nothing is being downloaded");
 			}
 			else{
@@ -122,12 +138,13 @@ function getTransfers(){
 					value: progress
 				});
 			}
+			if(callback != undefined)
+					callback();
 			
 		})
 		.fail(function(){
 			showMessage("Incorrect options or server not responding", "error");
 		});
-	
 }
 
 function removeElementFromServerQueue(queueId){
@@ -163,7 +180,7 @@ function resetDownloadsList(){
 	
 }
 
-function getQueue(){
+function getQueue(callback){
 
 	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/downloads/queue?username="+localStorage["login"];
 	$.ajax(url)
@@ -188,14 +205,16 @@ function getQueue(){
 					newElement.data("order",order);
 					newElement.data("queueId",queueId);
 				}
-				sortQueue("#queue");
+				sort("#queue li:not(#queue-element)",function(a){return $(a).data("order");});
 				$( "#queue" ).sortable({ update : updateQueueOrder });
-				//$( "#queue li" ).disableSelection();
 			}
+			if(callback != undefined)
+				callback();
 
 		})
 		.fail(function(){
-			//Nothing here as another call is being made to fetch the current download and that will also fail.
+			//Nothing here as another call is being made to fetch the current download and that will also fail and 
+			//so it's going to show an error message.
 		});
 			
 		
@@ -223,6 +242,7 @@ function getAvailableDownloads(){
 					downloadsFromServer.push(downloadName);
 					$("<li>").text(downloadName).appendTo("#downloads-list");
 				}
+				sort("#downloads-list li", function(a){return $(a).text()});
 			}
 		})
 		.fail(function(data, code, xhr){
@@ -249,6 +269,7 @@ function filterSearch(evt){
 			$("<li>").text(downloadsFromServer[i]).appendTo("#downloads-list");
 		}
 	}
+	sort("#downloads-list li", function(a){return $(a).text()});
 	$("#selected-count").text(String(0));
 	$( "#download-btn" ).button({ disabled: true });
 } 
@@ -326,19 +347,19 @@ function fileChange(evt){
 	}
 }
 
-function sortQueue(itemsSelector){
-	var items = $(itemsSelector  + " li:not(#queue-element)").get();
+function sort(itemsSelector, getKey){
+	var items = $(itemsSelector).get();
 	items.sort(function(a,b){ 
-	  var keyA = $(a).data("order");
-	  var keyB = $(b).data("order");
+	  var keyA = getKey(a);
+	  var keyB = getKey(b);
 
 	  if (keyA < keyB) return -1;
 	  if (keyA > keyB) return 1;
 	  return 0;
 	});
-	var ul = $(itemsSelector);
+	var parent = $(itemsSelector).parent();
 	$.each(items, function(i, li){
-	  ul.append(li);
+	  parent.append(li);
 	});
 }
 
@@ -361,6 +382,28 @@ function updateQueueOrder(){
 	})
 		.fail(function(){
 			showMessage("There was an error when reordering the queue", "error");}
+		);
+	
+}
+
+function togglePlayPause(){
+	var action;
+	if(status == "STOPPED"){
+		action = "start";
+	}
+	else if(status == "STARTED"){
+		action = "stop";
+	}
+	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/"+ action +"?username="+localStorage["login"];
+	$.ajax({
+		url : url
+	})
+		.done(function(){
+			getTransfers();
+			getQueue();
+		})
+		.fail(function(){
+			showMessage("There was an error. Try again later.", "error");}
 		);
 	
 }
