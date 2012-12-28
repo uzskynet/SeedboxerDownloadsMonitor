@@ -12,11 +12,18 @@ body {
 	
 }
 #info {
-	float : left;
-	width: 145px;
+	float: left;
+	width: 239px;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	white-space: nowrap;
 }
+
+#percentage {
+	float: left;
+}
+
 #play-pause-button {
-	float : right;
 	cursor: pointer;
 }
 #play-pause-button  img{

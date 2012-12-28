@@ -133,7 +133,8 @@ function getTransfersFromServer(callback){
 				var size = Number(download[0].getElementsByTagName("size")[0].textContent);
 				var transfered = Number(download[0].getElementsByTagName("transferred")[0].textContent);
 				var progress = transfered * 100 / size;
-				$("#info").text(downloadName + " ["+ progress.toFixed(2)+"%]");
+				$("#info").text(downloadName)
+				$("#percentage").text(" ["+ progress.toFixed(2)+"%]");
 				$( "#progressbar" ).progressbar({
 					value: progress
 				});
