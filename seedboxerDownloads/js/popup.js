@@ -202,7 +202,7 @@ function getQueue(callback){
 					newElement.find(".queue-name").text(downloadName);
 					newElement.show();
 					newElement.appendTo("#queue");
-					newElement.data("order",order);
+					newElement.data("order",parseInt(order));
 					newElement.data("queueId",queueId);
 				}
 				sort("#queue li:not(#queue-element)",function(a){return $(a).data("order");});
