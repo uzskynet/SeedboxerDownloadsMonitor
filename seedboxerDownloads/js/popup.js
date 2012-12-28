@@ -336,13 +336,21 @@ function fileChange(evt){
 	if($(evt.currentTarget).val() != ""){
 		$("#upload-btn").button({disabled : false});
 		var file = this.files[0];
-		type = file.type;
-		if(type != "application/x-bittorrent"){
-			$(evt.currentTarget).val("");
-			$("#upload-btn").button({disabled : true});
-			showMessage("Incorrect type, select a .torrent file.","warning");
-		}else{
-			uploadTorrent();
+		var fullPath = $(this).val();
+		if (fullPath) {
+			var startIndex = (fullPath.indexOf('\\') >= 0 ? fullPath.lastIndexOf('\\') : fullPath.lastIndexOf('/'));
+			var filename = fullPath.substring(startIndex);
+			if (filename.indexOf('\\') === 0 || filename.indexOf('/') === 0) {
+				filename = filename.substring(1);
+			}
+			var extension = filename.substring(filename.lastIndexOf('.'),filename.length);
+			if(".torrent" != extension.toLowerCase()){
+				$(evt.currentTarget).val("");
+				$("#upload-btn").button({disabled : true});
+				showMessage("Incorrect type, select a .torrent file.","warning");
+			}else{
+				uploadTorrent();
+			}
 		}
 	}
 }
