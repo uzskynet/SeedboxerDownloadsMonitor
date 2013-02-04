@@ -21,14 +21,46 @@ $(document).ready(function(){
 	$(document).ajaxStop(function(){
 		$(".overlay").hide();
 	});
-	getTransfers();
-	getQueue();
 	$("#username").val(localStorage["login"]);
 	$("#file").change(fileChange);
 	$('#upload-form').submit(function(){return false});
-	timer = setTimeout(updateProgress,10000);
+	checkApiKeyAndRetrieveIfNecesary();
+
 });
 
+function checkApiKeyAndRetrieveIfNecesary(){
+	if(localStorage["apikey"] == null){
+		var auth = localStorage["login"] + ':' + localStorage["password"];
+		auth = btoa(auth);
+		var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/apikey";
+		$.ajax({
+			url : url,
+			dataType : "json",
+			username : localStorage["login"],
+			password : localStorage["password"],
+			success : function(data, code, xhr){
+				localStorage["apikey"] = data.apiKey;
+				initialize();
+			},
+			error : function(){
+				showMessage("Incorrect username, password or server not responding", "error");
+			}
+		});
+	}
+	else{
+		initialize();
+	}
+}
+
+function initialize(){
+	$.ajaxSetup({
+		data : { apikey : localStorage["apikey"] }
+	});
+	getTransfers();
+	getQueue();
+	timer = setTimeout(updateProgress,10000);
+	
+}
 
 function showMessage(message, type){
 	$("#msg").attr("title",message);
@@ -111,12 +143,12 @@ To be able to use the same function for both we added a callback that's executed
 **/
 
 function getTransfersFromServer(callback){
-	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/status?username="+localStorage["login"];
+	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/status";
 	$.ajax(url)
 		.done(function(data, code, xhr){
 			var xml = xhr.responseXML;
 			var download = xml.getElementsByTagName("download");
-			status = xml.getElementsByTagName("status")[0].textContent;
+			status = xml.getElementsByTagName("downloadStatus")[0].textContent;
 			if(status == "STARTED"){
 				$("#play-pause-button").find("img").attr("src","pause.png");
 			}
@@ -127,6 +159,7 @@ function getTransfersFromServer(callback){
 			$( "#progressbar" ).progressbar();
 			$( "#progressbar" ).progressbar("destroy");
 				$("#info").text("Nothing is being downloaded");
+				$("#percentage").text("");
 			}
 			else{
 				var downloadName = download[0].getElementsByTagName("fileName")[0].textContent;
@@ -151,7 +184,7 @@ function getTransfersFromServer(callback){
 function removeElementFromServerQueue(queueId){
 
 	var xhr = new XMLHttpRequest();
-	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/downloads/delete?username="+localStorage["login"]+"&downloadId="+queueId;
+	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/downloads/delete?downloadId="+queueId;
 	$.ajax(url)
 		.done(function(){
 			getTransfers();
@@ -183,7 +216,7 @@ function resetDownloadsList(){
 
 function getQueue(callback){
 
-	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/downloads/queue?username="+localStorage["login"];
+	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/downloads/queue";
 	$.ajax(url)
 		.done(function(data, code, xhr){
 			var xml = xhr.responseXML;
@@ -225,7 +258,7 @@ function getQueue(callback){
 
 function getAvailableDownloads(){
 
-	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/downloads/list?username="+localStorage["login"];
+	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/downloads/list";
 	$.ajax(url)
 		.done(function(data, code, xhr){
 			var xml = xhr.responseXML;
@@ -280,7 +313,7 @@ function queueDownloadsInServer(){
 	$("#downloads-list .ui-selected").each(function(){
 		fileNames.push($(this).text());
 	});
-	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/downloads/put?username="+localStorage["login"];
+	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/downloads/put?";
 	for(var i=0;i<fileNames.length;i++){
 		url +="&fileName="+encodeURIComponent(fileNames[i]);
 	}
@@ -373,7 +406,7 @@ function sort(itemsSelector, getKey){
 }
 
 function updateQueueOrder(){
-	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/downloads/update?username="+localStorage["login"];
+	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/downloads/update";
 	var items = $("#queue li:not(#queue-element)").get();
 	var queueElements = [];
 	$.each(items,function(i,li){
@@ -403,7 +436,7 @@ function togglePlayPause(){
 	else if(status == "STARTED"){
 		action = "stop";
 	}
-	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/"+ action +"?username="+localStorage["login"];
+	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/"+ action;
 	$.ajax({
 		url : url
 	})

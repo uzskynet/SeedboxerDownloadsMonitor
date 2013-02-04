@@ -33,5 +33,29 @@ function registerAllEvents() {
 	document.querySelector("#login").onkeyup = function() {
 		setSetting(this, this.value);
 	};
+	
+	document.querySelector("#password").onkeyup = function() {
+		setSetting(this, this.value);
+		retrieveApikey();
+	};
+
+}
+
+function retrieveApikey(){
+	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/apikey";
+	$.ajax({
+		url : url,
+		dataType : "json",
+		username : localStorage["login"],
+		password : localStorage["password"],
+		success : function(data, code, xhr){
+			localStorage["apikey"] = data.apiKey;
+			$("#apikey").val(data.apiKey);
+		},
+		error : function(){
+			localStorage["apikey"] = undefined;
+			$("#apikey").val("");
+		}
+	});
 
 }
