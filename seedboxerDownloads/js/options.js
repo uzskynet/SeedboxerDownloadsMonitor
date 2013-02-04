@@ -46,16 +46,32 @@ function retrieveApikey(){
 	$.ajax({
 		url : url,
 		dataType : "json",
-		username : localStorage["login"],
-		password : localStorage["password"],
+		beforeSend: function (xhr){ 
+			xhr.setRequestHeader('Authorization', make_base_auth(localStorage["login"], localStorage["password"])); 
+		},
 		success : function(data, code, xhr){
-			localStorage["apikey"] = data.apiKey;
+			localStorage["apikey"] = data.apiKey != undefined ? data.apiKey : "" ;
 			$("#apikey").val(data.apiKey);
+			/*
+			$.ajax({
+					url : url,
+					dataType : "json",
+					beforeSend: function (xhr){ 
+						xhr.setRequestHeader('Authorization', ""); 
+					},
+			});
+			*/
 		},
 		error : function(){
-			localStorage["apikey"] = undefined;
+			localStorage["apikey"] = "";
 			$("#apikey").val("");
 		}
 	});
 
+}
+
+function make_base_auth(user, password) {
+  var tok = user + ':' + password;
+  var hash = btoa(tok);
+  return "Basic " + hash;
 }

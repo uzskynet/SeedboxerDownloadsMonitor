@@ -29,17 +29,27 @@ $(document).ready(function(){
 });
 
 function checkApiKeyAndRetrieveIfNecesary(){
-	if(localStorage["apikey"] == null){
+	if(!localStorage["apikey"]){
 		var auth = localStorage["login"] + ':' + localStorage["password"];
 		auth = btoa(auth);
 		var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/apikey";
 		$.ajax({
 			url : url,
 			dataType : "json",
-			username : localStorage["login"],
-			password : localStorage["password"],
+			beforeSend: function (xhr){ 
+				xhr.setRequestHeader('Authorization', make_base_auth(localStorage["login"], localStorage["password"])); 
+			},
 			success : function(data, code, xhr){
-				localStorage["apikey"] = data.apiKey;
+				localStorage["apikey"] = data.apiKey != undefined ? data.apiKey : "" ;
+				/*
+				$.ajax({
+					url : url,
+					dataType : "json",
+					beforeSend: function (xhr){ 
+						xhr.setRequestHeader('Authorization', ""); 
+					}
+				});
+				*/
 				initialize();
 			},
 			error : function(){
@@ -426,6 +436,11 @@ function updateQueueOrder(){
 			showMessage("There was an error when reordering the queue", "error");}
 		);
 	
+}
+function make_base_auth(user, password) {
+  var tok = user + ':' + password;
+  var hash = btoa(tok);
+  return "Basic " + hash;
 }
 
 function togglePlayPause(){
