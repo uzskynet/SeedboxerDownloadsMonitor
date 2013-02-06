@@ -339,7 +339,7 @@ function queueDownloadsInServer(){
 
 function uploadTorrent(){
 
-	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/torrents/add";
+	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/torrents/add?apikey=" + localStorage["apikey"];
     var formData = new FormData($('#upload-form')[0]);
     $.ajax({
         url: url,  //server script to process data
