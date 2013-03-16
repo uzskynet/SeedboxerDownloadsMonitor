@@ -1,14 +1,21 @@
 $(document).ready(function(){
 	registerAllEvents();
-
 	loadAllSettings();
+	if(localStorage["mode"] == null){
+		(localStorage["mode"] = "basic")
+	}
+	;
 });
 
 function loadAllSettings() {
-	var e = document.getElementsByTagName("input");
-	for (key in e) {
-		getSetting(e[key]);
-	}
+	$(".persistent-input").each(function(){
+		getSetting($(this).attr("id"));
+	});
+	if(localStorage["mode"] == "basic")
+		$("#toggle-mode").html("Advanced Mode");
+	else if(localStorage["mode"] == "advanced")
+		$("#toggle-mode").html("Basic Mode");
+	$("#toggle-mode").click(toggleMode);
 }
 
 
@@ -16,8 +23,8 @@ function setSetting(e, val) {
 	localStorage[e.id] = (val == undefined)?"":val;
 }
 
-function getSetting(e) {
-	document.getElementById(e.id).value = (localStorage[e.id]==undefined)?"":localStorage[e.id];
+function getSetting(id) {
+	document.getElementById(id).value = (localStorage[id]==undefined)?"":localStorage[id];
 }
 
 
@@ -42,7 +49,7 @@ function registerAllEvents() {
 }
 
 function retrieveApikey(){
-	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/apikey";
+	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/user/apikey";
 	$.ajax({
 		url : url,
 		dataType : "json",
@@ -74,4 +81,15 @@ function make_base_auth(user, password) {
   var tok = user + ':' + password;
   var hash = btoa(tok);
   return "Basic " + hash;
+}
+
+function toggleMode(){
+	if(localStorage["mode"] == "advanced"){
+		localStorage["mode"] = "basic";
+		$("#toggle-mode").html("Advanced Mode");
+	}
+	else if(localStorage["mode"] == "basic"){
+		localStorage["mode"] = "advanced";
+		$("#toggle-mode").html("Basic Mode");
+	}
 }

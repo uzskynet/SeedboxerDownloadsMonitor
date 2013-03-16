@@ -15,3 +15,6 @@ td {
 tr.specifics {
 	display: none;
 }
+.hidden {
+	display: none;
+}

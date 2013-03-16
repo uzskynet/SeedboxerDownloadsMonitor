@@ -24,6 +24,9 @@ $(document).ready(function(){
 	$("#username").val(localStorage["login"]);
 	$("#file").change(fileChange);
 	$('#upload-form').submit(function(){return false});
+	$("#tabs-3").bind("dragenter", dragEnter).bind("dragleave", dragExit).bind("dragover", dragOver)
+	var dropbox = document.getElementById("tabs-3")
+	dropbox.addEventListener("drop", drop, false);
 	checkApiKeyAndRetrieveIfNecesary();
 
 });
@@ -32,7 +35,7 @@ function checkApiKeyAndRetrieveIfNecesary(){
 	if(!localStorage["apikey"]){
 		var auth = localStorage["login"] + ':' + localStorage["password"];
 		auth = btoa(auth);
-		var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/apikey";
+		var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/user/apikey";
 		$.ajax({
 			url : url,
 			dataType : "json",
@@ -153,7 +156,7 @@ To be able to use the same function for both we added a callback that's executed
 **/
 
 function getTransfersFromServer(callback){
-	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/status";
+	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/user/status";
 	$.ajax(url)
 		.done(function(data, code, xhr){
 			var xml = xhr.responseXML;
@@ -337,35 +340,34 @@ function queueDownloadsInServer(){
 }
 
 
-function uploadTorrent(){
+function uploadTorrent(formData){
 
 	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/torrents/add?apikey=" + localStorage["apikey"];
-    var formData = new FormData($('#upload-form')[0]);
-    $.ajax({
-        url: url,  //server script to process data
-        type: 'POST',
-        xhr: function() {  // custom xhr
-            myXhr = $.ajaxSettings.xhr();
-            if(myXhr.upload){ // check if upload property exists
-                myXhr.upload.addEventListener('progress',progressHandlingFunction, false); // for handling the progress of the upload
-            }
-            return myXhr;
-        },
-        //Ajax events
-        success: function(){
+	$.ajax({
+		url: url,  //server script to process data
+		type: 'POST',
+		xhr: function() {  // custom xhr
+			myXhr = $.ajaxSettings.xhr();
+			if(myXhr.upload){ // check if upload property exists
+				myXhr.upload.addEventListener('progress',progressHandlingFunction, false); // for handling the progress of the upload
+			}
+			return myXhr;
+		},
+		//Ajax events
+		success: function(){
 			showMessage("Torrent uploaded successfully", "ok");
 		},
-        error: function(){
+		error: function(){
 			showMessage("Error trying to upload torrent.", "error");
 		},
-        // Form data
-        data: formData,
-        //Options to tell JQuery not to process data or worry about content-type
-        cache: false,
-        contentType: false,
-        processData: false
+		// Form data
+		data: formData,
+		//Options to tell JQuery not to process data or worry about content-type
+		cache: false,
+		contentType: false,
+		processData: false
 
-});
+	});
 }
 
 function progressHandlingFunction(e){
@@ -379,24 +381,21 @@ function progressHandlingFunction(e){
 function fileChange(evt){
 	if($(evt.currentTarget).val() != ""){
 		$("#upload-btn").button({disabled : false});
-		var file = this.files[0];
-		var fullPath = $(this).val();
-		if (fullPath) {
-			var startIndex = (fullPath.indexOf('\\') >= 0 ? fullPath.lastIndexOf('\\') : fullPath.lastIndexOf('/'));
-			var filename = fullPath.substring(startIndex);
-			if (filename.indexOf('\\') === 0 || filename.indexOf('/') === 0) {
-				filename = filename.substring(1);
-			}
-			var extension = filename.substring(filename.lastIndexOf('.'),filename.length);
-			if(".torrent" != extension.toLowerCase()){
-				$(evt.currentTarget).val("");
-				$("#upload-btn").button({disabled : true});
-				showMessage("Incorrect type, select a .torrent file.","warning");
-			}else{
-				uploadTorrent();
-			}
+		verifyFilesAndUpload(this.files);
+		$("#upload-btn").button({disabled : true});
+		$(evt.currentTarget).val("");
+	}
+}
+
+function verifyFiles(files){
+	for(var i=0;i<files.length;i++){
+		var file = files[i];
+		var extension = file.name.substring(file.name.lastIndexOf('.'),file.name.length);
+		if(".torrent" != extension.toLowerCase()){
+			return false;
 		}
 	}
+	return true;
 }
 
 function sort(itemsSelector, getKey){
@@ -416,7 +415,7 @@ function sort(itemsSelector, getKey){
 }
 
 function updateQueueOrder(){
-	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/downloads/update";
+	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/downloads/update?apikey=" + localStorage["apikey"];
 	var items = $("#queue li:not(#queue-element)").get();
 	var queueElements = [];
 	$.each(items,function(i,li){
@@ -451,7 +450,7 @@ function togglePlayPause(){
 	else if(status == "STARTED"){
 		action = "stop";
 	}
-	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/"+ action;
+	var url = "http://"+localStorage["host"]+":"+localStorage["port"]+"/webservices/user/"+ action;
 	$.ajax({
 		url : url
 	})
@@ -463,4 +462,50 @@ function togglePlayPause(){
 			showMessage("There was an error. Try again later.", "error");}
 		);
 	
+}
+
+
+function dragEnter(evt){
+	noopHandler(evt);
+	$("#tabs-3").addClass("drag-border-visible").removeClass("drag-border");
+	$("#tabs-3").width(266).height(92);
+	$("#upload-form").hide();
+	$("#drop-msg").show();
+}
+
+function dragExit(evt){
+	noopHandler(evt);
+	$("#tabs-3").addClass("drag-border").removeClass("drag-border-visible");
+	$("#upload-form").show();
+	$("#drop-msg").hide();
+}
+
+function dragOver(evt){
+	noopHandler(evt);
+}
+function noopHandler(evt) {
+  evt.stopPropagation();
+  evt.preventDefault();
+}
+function drop(evt){
+	$("#tabs-3").addClass("drag-border").removeClass("drag-border-visible");
+	$("#upload-form").show();
+	$("#drop-msg").hide();
+	var files = evt.dataTransfer.files;
+	verifyFilesAndUpload(files);
+}
+
+
+function verifyFilesAndUpload(files){
+	if(!verifyFiles(files)){
+		showMessage("Incorrect type, only torrent files allowed.","warning");
+		return false;
+	}
+	else{
+		for(var i=0;i<files.length;i++){
+			var formData = new FormData();
+			formData.append('file', files[i]);
+			uploadTorrent(formData);
+		}
+	}
 }

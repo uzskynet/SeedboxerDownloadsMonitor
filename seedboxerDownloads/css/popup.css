@@ -157,4 +157,13 @@ clear : both;
 .loader {
 	float : right;
 }
-	
+#tabs-3 {
+	margin-top: 4px;
+}
+.drag-border {
+	border: 2px dashed white !important;
+}
+
+.drag-border-visible {
+	border: 2px dashed grey !important;
+}
